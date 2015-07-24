@@ -15,20 +15,26 @@ When building is correct a `erl_rets.so` driver is placed under `priv` directory
 
 To use driver just start `erlang` with the correct paths:
 
-	$ erl -pa ebin/ deps/*/ebin
+```bash
+erl -pa ebin/ deps/*/ebin
+```
 
 Now start the driver:
 
-	$ application:start(erlrets).
-	1> application:start(erlrets).
-	20:26:59.022 [info] successfully loaded driver: erl_rets
-	ok
+```erlang
+1> application:start(erlrets).
+2> application:start(erlrets).
+20:26:59.022 [info] successfully loaded driver: erl_rets
+ok
+```
 	
 Use a search function, providing a query:
 
-	6> erlrets:search("query").
-	20:27:14.506 [info] executing search query: query on port #Port<0.2875>
-	{ok,ok}
+```erlang
+6> erlrets:search("query").
+20:27:14.506 [info] executing search query: query on port #Port<0.2875>
+{ok,ok}
+```
 
 Enjoy!
 
