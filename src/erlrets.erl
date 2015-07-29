@@ -85,21 +85,7 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
-    Ebin = filename:dirname(code:which(?MODULE)),
-    DriverDir = filename:join(filename:dirname(Ebin), "priv"),
-    ok = case erl_ddll:load_driver(DriverDir, ?DRIVER_SO_NAME) of
-	     ok -> 
-                 lager:info("successfully loaded driver: ~s~n", [?DRIVER_SO_NAME]), 
-	         ok;
-	     {error, already_loaded} -> 
-		 lager:warning("already loaded driver: ~s~n", [?DRIVER_SO_NAME]),
-		 ok;
-	     {error, Error}          -> 
-                 lager:error("error loading driver was: ~p~n", [erl_ddll:format_error(Error)]),
-	         exit(erl_ddll:format_error(Error))
-         end,
-    Port = open_port({spawn, ?DRIVER_SO_NAME}, []),
-    {ok, #state{driver=Port, subscription = []}}.
+    {ok, #state{driver=?DRIVER_SO_NAME, subscription = []}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -115,10 +101,9 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({search, Query}, _From, State=#state{driver=Port})                ->
-    lager:info("executing search query: ~s on port ~p~n", [Query, Port]),
-    Result = erlang:port_control(Port, ?EXECUTE_SEARCH, Query), 
-    {reply, {ok, binary_to_term(Result)}, State};    
+handle_call({search, Query}, _From, State=#state{driver=NifDriver})            ->
+    lager:info("executing search query: ~s on drv_nif: ~p~n", [Query, NifDriver]), 
+    {reply, {ok, ok}, State};    
 handle_call(subscribe, {Pid, _}, #state{driver=Port, subscription=S})          ->
     Reference = erlang:make_ref(),
     {reply, {ok, Reference}, #state{driver=Port, subscription=[ {Reference, Pid} | S]}};
