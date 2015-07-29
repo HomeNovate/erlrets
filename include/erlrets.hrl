@@ -12,5 +12,8 @@
 
 -define(DRIVER_SO_NAME, "erl_rets").
 
-%% Commands (driver)
--define(EXECUTE_SEARCH, 1).
+%% Queries
+-define(BUILD_LOGIN_QUERY(Url, Username, Password, Options), 
+    [{url_login, Url},
+     {username, Username},
+     {password, Password} | Options]).

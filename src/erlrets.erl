@@ -15,7 +15,10 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, search/1, subscribe/0, unsubscribe/1]).
+-export([start_link/0, 
+         login/4,
+         subscribe/0, 
+         unsubscribe/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -32,13 +35,13 @@
 %%%===================================================================
 
 %%--------------------------------------------------------------------
-%% @doc Send a search query to the libRETS 
+%% @doc Send a request to login against to the RETS server 
 %%
-%% @spec search(Query :: string()) -> ok
+%% @spec search(Url :: string(), Username :: string(), Password :: string(), Options :: list()) -> ok
 %%--------------------------------------------------------------------
--spec search(Query :: string()) -> ok.
-search(Query) ->
-    gen_server:call(?MODULE, {search, Query}).
+-spec login(Url :: string(), Username :: string(), Password :: string(), Options :: list()) -> ok.
+login(Url, Username, Password, Options) ->
+    gen_server:call(?MODULE, {login, Url, Username, Password, Options}).
 
 %%--------------------------------------------------------------------
 %% @doc Subscribe pid to send data
@@ -101,9 +104,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({search, Query}, _From, State=#state{driver=NifDriver})            ->
-    lager:info("executing search query: ~s on drv_nif: ~p~n", [Query, NifDriver]), 
-    {reply, {ok, ok}, State};    
+handle_call({login, Url, Username, Password, Options}, _From, State)           ->
+    lager:info("trying login into rets server ~p~n", [Url]),
+    Query = ?BUILD_LOGIN_QUERY(Url, Username, Password, Options),
+    Reply = erlrets_driver_nif:login(Query),
+    {reply, {ok, Reply}, State};
 handle_call(subscribe, {Pid, _}, #state{driver=Port, subscription=S})          ->
     Reference = erlang:make_ref(),
     {reply, {ok, Reference}, #state{driver=Port, subscription=[ {Reference, Pid} | S]}};
