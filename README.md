@@ -100,7 +100,7 @@ ok
 	
 Enjoy!
 
-## **Session**
+**[Session](#session)**
 
 To start a `PID` to manage the session against RETS server:
 
@@ -125,7 +125,7 @@ To start a `PID` to manage the session against RETS server:
 ```
 Now you can use the `PID` to perform actions over the opened session.
 
-## **Checking session**
+**[Checking session](#checking-session)**
 
 To check if the session is valid:
 
