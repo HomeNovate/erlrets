@@ -11,6 +11,8 @@
 %%
 -module(erlrets_app).
 
+-author('zgbjgg@gmail.com').
+
 -behaviour(application).
 
 %% Application callbacks

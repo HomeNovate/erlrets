@@ -100,9 +100,9 @@ ok
 	
 Enjoy!
 
-## **Login**
+## **Session**
 
-To login against RETS server:
+To start a `PID` to manage the session against RETS server:
 
 ```erlang
 5> Options = [{user_agent, ""}, {user_agent_password, ""}, {use_http_get, "false"}, {rets_version, "1_8"}, {use_full_metadata, "false"}, {broker_code, ""}, {save_metadata_tm, ""}, {proxy_url, ""}, {proxy_pass, ""}, {disable_streaming, "false"}, {enable_caching, "true"}, {encoding, "ascii"}].
@@ -118,12 +118,24 @@ To login against RETS server:
  {disable_streaming,"false"},
  {enable_caching,"true"},
  {encoding,"ascii"}]
-6> erlrets:login("http://10.0.2.2:8080/rets/login", "zgbjgg", "password", Options).
-22:52:32.563 [info] trying login into rets server "http://10.0.2.2:8080/rets/login"
-22:52:32.619 [info] loading driver on "./priv/erl_rets_nif" 
-22:52:32.708 [info] successfully loaded driver: erl_rets
-{ok,true} 
+6> {ok, Pid} = erlrets:start_link("http://10.0.2.2:8080/rets/login", "zgbjgg", "password", Options).
+21:54:38.476 [info] loading driver on "./priv/erl_rets_nif" 
+21:54:38.500 [info] successfully loaded driver: erl_rets
+{ok,<0.55.0>}
 ```
+Now you can use the `PID` to perform actions over the opened session.
+
+## **Checking session**
+
+To check if the session is valid:
+
+```erlang
+7> erlrets:check_session().
+21:54:45.683 [info] checking session by resource <<131,97,19>>
+{ok,active}
+```
+
+## **Comming soon more features ...**
 
 ## **Features**
 * NIF between Erlang and C++

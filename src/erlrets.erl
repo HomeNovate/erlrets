@@ -9,16 +9,15 @@
 %% file, You can obtain one at http://mozilla.org/MPL/2.0/.
 %%
 %%
-
 -module(erlrets).
+
+-author('zgbjgg@gmail.com').
 
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, 
-         login/4,
-         subscribe/0, 
-         unsubscribe/1]).
+-export([start_link/4, 
+         check_session/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -26,7 +25,7 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {driver = [], subscription = []}).
+-record(state, {session_ref = <<>>}).
 
 -include("erlrets.hrl").
 
@@ -34,42 +33,18 @@
 %%% API
 %%%===================================================================
 
-%%--------------------------------------------------------------------
-%% @doc Send a request to login against to the RETS server 
-%%
-%% @spec search(Url :: string(), Username :: string(), Password :: string(), Options :: list()) -> ok
-%%--------------------------------------------------------------------
--spec login(Url :: string(), Username :: string(), Password :: string(), Options :: list()) -> ok.
-login(Url, Username, Password, Options) ->
-    gen_server:call(?MODULE, {login, Url, Username, Password, Options}).
-
-%%--------------------------------------------------------------------
-%% @doc Subscribe pid to send data
-%%
-%% @spec subscribe() -> {ok, reference()}
-%%--------------------------------------------------------------------
--spec subscribe() -> {ok, reference()}.
-subscribe() ->
-    gen_server:call(?MODULE, subscribe).
-
-%%--------------------------------------------------------------------
-%% @doc Unsubscribe pid via reference to avoid send data
-%%
-%% @spec unsubscribe( Ref :: reference()) -> {ok, unsubscribe}
-%%--------------------------------------------------------------------
--spec unsubscribe(Ref :: reference()) -> {ok, unsubscribe}.
-unsubscribe(Ref) ->
-    gen_server:call(?MODULE, {unsubscribe, Ref}).
+check_session() ->
+    gen_server:call(?MODULE, checking_session).
 
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
 %%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
+%% @spec start_link(Options :: list()) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Url, Username, Password, Options) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Url, Username, Password, Options], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -86,9 +61,17 @@ start_link() ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
+init([Url, Username, Password, Options]) ->
     process_flag(trap_exit, true),
-    {ok, #state{driver=?DRIVER_SO_NAME, subscription = []}}.
+    Query = ?BUILD_LOGIN_QUERY(Url, Username, Password, Options),
+    case catch erlrets_driver_nif:login(Query) of
+        {'EXIT', _} ->
+            lager:debug("couldn't open session"),
+            {stop, error};
+        {ok, Ref}   ->
+             SessionRef = term_to_binary(Ref), 
+             {ok, #state{session_ref = SessionRef}}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -104,19 +87,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({login, Url, Username, Password, Options}, _From, State)           ->
-    lager:info("trying login into rets server ~p~n", [Url]),
-    Query = ?BUILD_LOGIN_QUERY(Url, Username, Password, Options),
-    Reply = erlrets_driver_nif:login(Query),
+handle_call(checking_session, _From, State=#state{session_ref=Resource}) ->
+    lager:info("checking session by resource ~p~n", [Resource]),
+    Reply = erlrets_driver_nif:check_session(binary_to_term(Resource)),
     {reply, {ok, Reply}, State};
-handle_call(subscribe, {Pid, _}, #state{driver=Port, subscription=S})          ->
-    Reference = erlang:make_ref(),
-    {reply, {ok, Reference}, #state{driver=Port, subscription=[ {Reference, Pid} | S]}};
-handle_call({unsubscribe, Ref}, _From, #state{driver=Port, subscription=S})    ->
-    NewS = [ Scr || {Reference, _}=Scr <- S, Ref =/= Reference],
-    {reply, {ok, unsubscribe},  #state{driver=Port, subscription=NewS}};    
-handle_call(stop, _From, State=#state{driver=Port})                            ->
-    true = erlang:port_close(Port),
+handle_call(stop, _From, State)                            ->
     {stop, normal, ok, State}.
 
 %%--------------------------------------------------------------------
@@ -142,11 +117,8 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({'EXIT', _Port, _Reason}, _State) 				      ->
-    exit(port_terminated),
-    {noreply, #state{driver=nil, subscription=[]}};
-handle_info({_Port, closed}, _State) 					      ->
-    {noreply, #state{driver=nil, subscription=[]}}.
+handle_info(_Info, State) ->
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private

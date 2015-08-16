@@ -15,10 +15,38 @@
 #include <memory>
 #include <iostream>
 #include <set>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h> 
 #include <string>
-#include "login.h"
+#include "librets.h"
+#include "Login.h"
+#include "erl_rets_util.h"
 
+using namespace librets;
 using std::map;
+
+/* Global storage for sessions */
+static map<int, RetsSessionPtr> sessions;
+
+/* Check session nif */
+static ERL_NIF_TERM CheckSession_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    if (!enif_is_number(env, argv[0])) 
+        return enif_make_badarg(env); 
+
+    // RetsSessionPtr session = sessions.begin()->second;
+    int iKey;
+    if (!enif_get_int(env, argv[0], &iKey))
+        return enif_make_badarg(env); 
+
+    RetsSessionPtr session = sessions.find(iKey)->second;
+   
+    if(!session)
+        return enif_make_atom(env, "expired");    
+
+    return enif_make_atom(env, "active");
+}
 
 /* Login nif */
 static ERL_NIF_TERM Login_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -37,7 +65,9 @@ static ERL_NIF_TERM Login_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         return enif_make_badarg(env);
 
     /* Logging in using map */
-    if(!logging_in(Options.find("url_login")->second,
+    Login login;
+    
+    RetsSessionPtr session = login.OpenSession(Options.find("url_login")->second,
         Options.find("username")->second,
         Options.find("password")->second,
         Options.find("user_agent")->second,
@@ -51,18 +81,34 @@ static ERL_NIF_TERM Login_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         Options.find("proxy_pass")->second,
         Options.find("disable_streaming")->second,
         Options.find("enable_caching")->second,
-        Options.find("encoding")->second)) 
-    {
-        return enif_make_atom(env, "true"); 
-    } else {
+        Options.find("encoding")->second);
+
+    if(!session)
         return enif_make_atom(env, "false");
-    }
+
+    /* Generate random key */
+    int iKey;
+   
+    srand (time(NULL));
+
+    iKey = rand() % 100;  
+
+    ERL_NIF_TERM atom_ok = enif_make_atom(env, "ok");
+    ERL_NIF_TERM ref = enif_make_int(env, iKey);
+    
+    /* Store session into map sessions ! */
+    sessions[iKey] = session;
+
+    return enif_make_tuple(env, 2, atom_ok, ref);
 }
+
 
 /* All nif functions */
 static ErlNifFunc nif_funcs[] = {
-    {"login", 1, Login_nif}
+    {"login", 1, Login_nif},
+    {"check_session", 1, CheckSession_nif}
 };
 
 /* INIT Nif */
 ERL_NIF_INIT(erlrets_driver_nif, nif_funcs, NULL, NULL, NULL, NULL)
+

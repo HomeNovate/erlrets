@@ -1,6 +1,20 @@
+%%
+%% Copyright (C) 2015 
+%% This is a product for HomeNovate LLC
+%% Authors: Jorge Garrido <zgbjgg@gmail.com>
+%% All rights reserved.
+%%
+%% This Source Code Form is subject to the terms of the Mozilla Public
+%% License, v. 2.0. If a copy of the MPL was not distributed with this
+%% file, You can obtain one at http://mozilla.org/MPL/2.0/.
+%%
+%%
 -module(erlrets_driver_nif).
 
--export([login/1]).
+-author('zgbjgg@gmail.com').
+
+-export([login/1, 
+         check_session/1]).
 
 -include("erlrets.hrl").
 
@@ -27,10 +41,15 @@ init() ->
             exit(no_smp_support)
     end.
 
--spec login(Query :: binary()) -> tuple().
-
 %% @doc Try a login againts a RETS server using a query,
 %% the query must be built with a erl interface.
-
+%% @spec login(_Query :: term()) -> {ok, integer()}
+-spec login(_Query :: term()) -> {ok, integer()}.
 login(_Query) ->
+    exit(nif_library_not_loaded).
+
+%% @doc Validates if session is opened or not
+%% @spec check_session(_Resource :: term()) -> active | expired
+-spec check_session(_Resource :: term()) -> active | expired.
+check_session(_Resource) ->
     exit(nif_library_not_loaded).

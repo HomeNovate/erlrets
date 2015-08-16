@@ -9,8 +9,9 @@
 %% file, You can obtain one at http://mozilla.org/MPL/2.0/.
 %%
 %%
-
 -module(erlrets_sup).
+
+-author('zgbjgg@gmail.com').
 
 -behaviour(supervisor).
 
@@ -35,5 +36,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    Childs = [?CHILD(erlrets, worker)],
+    Childs = [],
     {ok, { {one_for_one, 1000, 3600}, Childs} }.

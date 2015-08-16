@@ -1,6 +1,6 @@
 {application, erlrets,
  [
-  {description, "Erlang Driver for libRETS"},
+  {description, "Erlang Driver Client for RETS"},
   {vsn, "0.1"},
   {registered, []},
   {applications, [
